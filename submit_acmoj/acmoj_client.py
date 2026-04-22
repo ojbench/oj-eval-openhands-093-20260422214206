@@ -34,7 +34,8 @@ from datetime import datetime
 
 class ACMOJClient:
     def __init__(self, access_token: str):
-        self.api_base = "https://acm.sjtu.edu.cn/OnlineJudge/api/v1"
+        # Use lowercase endpoint per current ACMOJ deployment to avoid redirect issues
+        self.api_base = "https://acm.sjtu.edu.cn/onlinejudge/api/v1"
         self.headers = {
             "Authorization": f"Bearer {access_token}",
             "Content-Type": "application/x-www-form-urlencoded",
@@ -44,33 +45,52 @@ class ACMOJClient:
         self.submission_log_file = '/workspace/submission_ids.log'
         
 
-    def _make_request(self, method: str, endpoint: str, data: Dict[str, Any] = None, 
+    def _make_request(self, method: str, endpoint: str, data: Dict[str, Any] = None,
                      params: Dict[str, Any] = None) -> Optional[Dict]:
-        url = f"{self.api_base}{endpoint}"
-        try:
-            if method.upper() == "GET":
-                response = requests.get(url, headers=self.headers, params=params, timeout=10, proxies={"https": None, "http": None})
-            elif method.upper() == "POST":
-                response = requests.post(url, headers=self.headers, data=data, timeout=10, proxies={"https": None, "http": None})
-            else:
-                print(f"Unsupported HTTP method: {method}")
-                return None
+        bases = [
+            self.api_base,
+            "https://acm.sjtu.edu.cn/OnlineJudge/api/v1",
+            "https://acm.sjtu.edu.cn/onlinejudge/api/v1",
+            "https://acm.sjtu.edu.cn/OnlineJudge3/api/v1",
+            "https://acm.sjtu.edu.cn/onlinejudge3/api/v1",
+            "https://oj.sjtu.edu.cn/OnlineJudge/api/v1",
+            "https://oj.sjtu.edu.cn/onlinejudge/api/v1",
+            "https://oj.sjtu.edu.cn/onlinejudge3/api/v1",
+            "https://oj.sjtu.edu.cn/OnlineJudge3/api/v1",
+        ]
+        last_error = None
+        for base in bases:
+            url = f"{base}{endpoint}"
+            try:
+                if method.upper() == "GET":
+                    response = requests.get(url, headers=self.headers, params=params, timeout=10, proxies={"https": None, "http": None}, allow_redirects=True)
+                elif method.upper() == "POST":
+                    response = requests.post(url, headers=self.headers, data=data, timeout=10, proxies={"https": None, "http": None}, allow_redirects=False)
+                else:
+                    print(f"Unsupported HTTP method: {method}")
+                    return None
 
-            if response.status_code == 204:
-                return {"status": "success", "message": "Operation successful"}
+                if response.status_code == 204:
+                    return {"status": "success", "message": "Operation successful"}
 
-            response.raise_for_status()
-            
-            if response.content:
-                return response.json()
-            else:
-                return {"status": "success"}
+                response.raise_for_status()
 
-        except requests.exceptions.RequestException as e:
-            print(f"API Request failed: {e}")
-            if 'response' in locals() and response:
-                print(f"Response text: {response.text}")
-            return None
+                if response.content:
+                    return response.json()
+                else:
+                    return {"status": "success"}
+            except requests.exceptions.RequestException as e:
+                last_error = e
+                try:
+                    print(f"API Request failed on base {base}: {e}")
+                    if 'response' in locals() and response:
+                        print(f"Response text: {response.text}")
+                except Exception:
+                    pass
+                continue
+        if last_error:
+            print(f"API Request failed after trying all bases: {last_error}")
+        return None
 
     def _save_submission_id(self, submission_id):
         try:
