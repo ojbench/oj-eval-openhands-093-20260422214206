@@ -46,7 +46,7 @@ class ACMOJClient:
         
 
     def _make_request(self, method: str, endpoint: str, data: Dict[str, Any] = None,
-                     params: Dict[str, Any] = None) -> Optional[Dict]:
+                     params: Dict[str, Any] = None, json_data: Dict[str, Any] = None) -> Optional[Dict]:
         bases = [
             self.api_base,
             "https://acm.sjtu.edu.cn/OnlineJudge/api/v1",
@@ -67,7 +67,7 @@ class ACMOJClient:
                 if method.upper() == "GET":
                     response = requests.get(url, headers=self.headers, params=params, timeout=10, proxies={"https": None, "http": None}, allow_redirects=True)
                 elif method.upper() == "POST":
-                    response = requests.post(url, headers=self.headers, data=data, timeout=10, proxies={"https": None, "http": None}, allow_redirects=False)
+                    response = requests.post(url, headers=self.headers, data=data, json=json_data, timeout=10, proxies={"https": None, "http": None}, allow_redirects=False)
                 else:
                     print(f"Unsupported HTTP method: {method}")
                     return None
@@ -110,11 +110,13 @@ class ACMOJClient:
             print(f"⚠️ Warning: Failed to save submission ID: {e}")
 
     def submit_git(self, problem_id: int, git_url: str) -> Optional[Dict]:
+        # Try both form-encoded and JSON bodies as some deployments differ
         data = {"language": "git", "code": git_url}
         result = self._make_request("POST", f"/problem/{problem_id}/submit", data=data)
+        if not result:
+            result = self._make_request("POST", f"/problem/{problem_id}/submit", json_data=data)
         if result and 'id' in result:
             self._save_submission_id(result['id'])
-
         return result
 
     def get_submission_detail(self, submission_id: int) -> Optional[Dict]:
