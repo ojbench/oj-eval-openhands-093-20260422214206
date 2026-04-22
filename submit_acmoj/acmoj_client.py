@@ -53,6 +53,8 @@ class ACMOJClient:
             "https://acm.sjtu.edu.cn/onlinejudge/api/v1",
             "https://acm.sjtu.edu.cn/OnlineJudge3/api/v1",
             "https://acm.sjtu.edu.cn/onlinejudge3/api/v1",
+            "https://acm.sjtu.edu.cn/oj/api/v1",
+            "https://acm.sjtu.edu.cn/api/v1",
             "https://oj.sjtu.edu.cn/OnlineJudge/api/v1",
             "https://oj.sjtu.edu.cn/onlinejudge/api/v1",
             "https://oj.sjtu.edu.cn/onlinejudge3/api/v1",
