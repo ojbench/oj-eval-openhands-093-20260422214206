@@ -115,6 +115,12 @@ class ACMOJClient:
         result = self._make_request("POST", f"/problem/{problem_id}/submit", data=data)
         if not result:
             result = self._make_request("POST", f"/problem/{problem_id}/submit", json_data=data)
+        # Fallback: some deployments accept a generic /submit endpoint with problem_id in body
+        if not result:
+            alt = {"problem_id": problem_id, "language": "git", "code": git_url}
+            result = self._make_request("POST", "/submit", data=alt)
+            if not result:
+                result = self._make_request("POST", "/submit", json_data=alt)
         if result and 'id' in result:
             self._save_submission_id(result['id'])
         return result
