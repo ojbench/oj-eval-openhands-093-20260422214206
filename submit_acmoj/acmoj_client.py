@@ -36,6 +36,7 @@ class ACMOJClient:
     def __init__(self, access_token: str):
         # Use lowercase endpoint per current ACMOJ deployment to avoid redirect issues
         self.api_base = "https://acm.sjtu.edu.cn/onlinejudge/api/v1"
+        self.access_token = access_token
         self.headers = {
             "Authorization": f"Bearer {access_token}",
             "Content-Type": "application/x-www-form-urlencoded",
@@ -64,10 +65,15 @@ class ACMOJClient:
         for base in bases:
             url = f"{base}{endpoint}"
             try:
+                # ensure params include access_token to bypass some auth middlewares
+                merged_params = dict(params or {})
+                merged_params.setdefault('access_token', self.access_token)
+                req_headers = dict(self.headers)
+                req_headers['Accept'] = 'application/json'
                 if method.upper() == "GET":
-                    response = requests.get(url, headers=self.headers, params=params, timeout=10, proxies={"https": None, "http": None}, allow_redirects=True)
+                    response = requests.get(url, headers=req_headers, params=merged_params, timeout=15, proxies={"https": None, "http": None}, allow_redirects=True)
                 elif method.upper() == "POST":
-                    response = requests.post(url, headers=self.headers, data=data, json=json_data, timeout=10, proxies={"https": None, "http": None}, allow_redirects=True)
+                    response = requests.post(url, headers=req_headers, params=merged_params, data=data, json=json_data, timeout=20, proxies={"https": None, "http": None}, allow_redirects=True)
                 else:
                     print(f"Unsupported HTTP method: {method}")
                     return None
